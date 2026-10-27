@@ -144,6 +144,59 @@ export const sfx = {
     ['C5', 'E5', 'G5', 'C6'].forEach((n, i) =>
       playNote(master, 'square', noteToFreq(n), ctx.currentTime + i * 0.08, 0.25, 0.2));
   },
+  whoosh() {
+    if (!audio()) return;
+    noise(master, ctx.currentTime, 0.12, 0.25, 'bandpass', 900);
+  },
+  hit() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    drum(master, 'k', t);
+    noise(master, t, 0.1, 0.5, 'lowpass', 2500);
+  },
+  block() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    playNote(master, 'square', 1800, t, 0.05, 0.12);
+    noise(master, t, 0.05, 0.25, 'highpass', 4000);
+  },
+  splash() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    noise(master, t, 0.18, 0.3, 'bandpass', 2600);
+    noise(master, t + 0.03, 0.12, 0.2, 'highpass', 5000);
+  },
+  crateBreak() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    drum(master, 't', t);
+    noise(master, t, 0.25, 0.5, 'bandpass', 700);
+    noise(master, t + 0.05, 0.15, 0.3, 'bandpass', 1500);
+  },
+  zoneHurt() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    playNote(master, 'sawtooth', 220, t, 0.12, 0.15);
+    playNote(master, 'sawtooth', 165, t + 0.1, 0.18, 0.15);
+  },
+  spring() {
+    if (!audio()) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.25);
+    g.gain.setValueAtTime(0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + 0.32);
+  },
+  crumble() {
+    if (!audio()) return;
+    noise(master, ctx.currentTime, 0.35, 0.35, 'lowpass', 600);
+  },
   jump() {
     if (!audio()) return;
     const t = ctx.currentTime;
