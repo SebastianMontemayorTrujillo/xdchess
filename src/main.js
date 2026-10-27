@@ -1,6 +1,7 @@
 import { newGame, sanitize, legalMoves, isCapture, resolveCapture, resolveLastChance, gameStatus } from './game.js';
 import { renderBoard, pieceName } from './board.js';
 import { spinRoulette, flash } from './roulette.js';
+import { playMusic, stopMusic, toggleMute } from './audio.js';
 
 const boardEl = document.getElementById('board');
 const statusEl = document.getElementById('status');
@@ -59,11 +60,14 @@ function onSquare(square) {
   render();
 }
 
-async function playMinigame(title) {
+// fighters: { w: piece, b: piece } — the two pieces in this fight, by colour.
+async function playMinigame(title, fighters) {
   overlay.hidden = false;
   const game = await spinRoulette(overlay, title);
   overlay.innerHTML = '';
-  const winner = await game.run(overlay);
+  playMusic(game.id);
+  const winner = await game.run(overlay, fighters);
+  stopMusic();
   await flash(overlay, `<div class="big">${colorName(winner)} wins the ${game.name}!</div>`);
   overlay.hidden = true;
   overlay.innerHTML = '';
@@ -75,7 +79,10 @@ async function fight(from, to) {
   render();
   const attacker = chess.get(from);
   const defender = chess.get(to);
-  const winner = await playMinigame(`${pieceName(attacker)} attacks ${pieceName(defender)}`);
+  const winner = await playMinigame(`${pieceName(attacker)} attacks ${pieceName(defender)}`, {
+    [attacker.color]: attacker,
+    [defender.color]: defender,
+  });
   let result = resolveCapture(chess, from, to, winner === attacker.color);
 
   // A defender victory may expose the attacker's king: it gets a last-chance fight per checker.
@@ -84,7 +91,10 @@ async function fight(from, to) {
     const king = chess.get(result.king);
     const checkerSq = result.checkers[0];
     const checker = chess.get(checkerSq);
-    const w = await playMinigame(`LAST CHANCE! ${pieceName(king)} vs ${pieceName(checker)}`);
+    const w = await playMinigame(`LAST CHANCE! ${pieceName(king)} vs ${pieceName(checker)}`, {
+      [king.color]: king,
+      [checker.color]: checker,
+    });
     result = resolveLastChance(chess, checkerSq, w === king.color);
   }
   if (result.status === 'kingDied') over = `${colorName(result.winner === 'w' ? 'b' : 'w')}'s king has fallen — ${colorName(result.winner)} wins!`;
@@ -98,5 +108,8 @@ document.getElementById('resign').addEventListener('click', () => {
   render();
 });
 document.getElementById('new').addEventListener('click', () => !busy && start());
+document.getElementById('mute').addEventListener('click', (e) => {
+  e.target.textContent = toggleMute() ? '🔇' : '🔊';
+});
 
 start();

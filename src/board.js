@@ -1,4 +1,4 @@
-const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+export const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
 const FILES = 'abcdefgh';
 
 // Renders chess.board() into `el`. Calls onSquare(square) on clicks.

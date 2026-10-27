@@ -1,3 +1,5 @@
+import { GLYPH } from '../board.js';
+
 const MAX_HP = 10;
 const COOLDOWN = 150; // ms between punches
 const KEYS = {
@@ -8,14 +10,22 @@ const KEYS = {
 export default {
   id: 'boxing',
   name: 'Boxing',
-  run(container) {
+  run(container, fighters) {
     return new Promise((resolve) => {
+      const piece = (c) => `<span class="piece p${c}">${GLYPH[fighters[c].type]}</span>`;
+      const glove = '<span class="glove">🥊</span>';
       container.innerHTML = `
         <div class="big">🥊 Boxing</div>
         <div>White: X punch, hold S block · Black: M punch, hold K block</div>
         <div class="boxers">
-          <div class="boxer" id="bx-w">🦀<div class="hpbar"><div style="background:#eee"></div></div></div>
-          <div class="boxer" id="bx-b">🦞<div class="hpbar"><div style="background:#e55"></div></div></div>
+          <div class="boxer" id="bx-w" style="--dir: 1">
+            <div class="fighter">${piece('w')}${glove}</div>
+            <div class="hpbar"><div style="background:#eee"></div></div>
+          </div>
+          <div class="boxer" id="bx-b" style="--dir: -1">
+            <div class="fighter">${glove}${piece('b')}</div>
+            <div class="hpbar"><div style="background:#e55"></div></div>
+          </div>
         </div>`;
       const p = {
         w: { hp: MAX_HP, blocking: false, last: 0, el: container.querySelector('#bx-w') },
@@ -43,8 +53,13 @@ export default {
         else if (!e.repeat && !me.blocking && performance.now() - me.last >= COOLDOWN) {
           me.last = performance.now();
           me.el.classList.add('punch');
-          setTimeout(() => me.el.classList.remove('punch'), 80);
-          if (!foe.blocking) foe.hp--;
+          setTimeout(() => me.el.classList.remove('punch'), 90);
+          if (!foe.blocking) {
+            foe.hp--;
+            foe.el.classList.remove('hit');
+            void foe.el.offsetWidth; // restart the hit animation
+            foe.el.classList.add('hit');
+          }
           if (foe.hp <= 0) {
             draw();
             return done(c);
