@@ -7,11 +7,14 @@ const CONTROLS = {
   b: { up: 'i', left: 'j', down: 'k', right: 'l', fire: 'm' },
 };
 const GAME_KEYS = new Set(Object.values(CONTROLS).flatMap(Object.values));
+// Computer shooter: re-decides every `reaction` ms, dodges bullets it sees coming,
+// otherwise keeps `range` px from the opponent while strafing.
+const BOT = { reaction: 140, range: 260, lookahead: 0.6, dodgeMargin: 12, fireChance: 0.6, strafeSwitch: 1.2 };
 
 export default {
   id: 'shooter',
   name: 'Water Gun',
-  run(container) {
+  run(container, { ai = null } = {}) {
     return new Promise((resolve) => {
       container.innerHTML = `
         <div class="big">💦 Water Gun</div>
@@ -54,19 +57,68 @@ export default {
         });
       };
 
+      // Computer input: same actions as the keyboard (up/down/left/right/fire).
+      const bot = { input: {}, nextDecision: 0, strafe: 1, strafeUntil: 0 };
+      const decide = (now) => {
+        const me = players[ai];
+        const foe = players[ai === 'w' ? 'b' : 'w'];
+        let mx = 0, my = 0;
+
+        // Dodge the incoming bullet that will pass closest soonest.
+        let threat = null;
+        for (const b of bullets) {
+          if (b.owner === ai) continue;
+          const dx = me.x - b.x, dy = me.y - b.y;
+          const t = (dx * b.vx + dy * b.vy) / (BULLET_SPEED * BULLET_SPEED); // time to closest approach
+          if (t <= 0 || t > BOT.lookahead) continue;
+          const miss = Math.hypot(dx - b.vx * t, dy - b.vy * t);
+          if (miss < R + BULLET_R + BOT.dodgeMargin && (!threat || t < threat.t)) threat = { b, t };
+        }
+        if (threat) {
+          const { b } = threat;
+          // Step perpendicular to the bullet, toward the side we're already on.
+          const side = Math.sign((me.x - b.x) * b.vy - (me.y - b.y) * b.vx) || 1;
+          mx = (b.vy / BULLET_SPEED) * side;
+          my = (-b.vx / BULLET_SPEED) * side;
+          const nx = me.x + mx * 40, ny = me.y + my * 40;
+          if (nx < R || nx > W - R || ny < R || ny > H - R) { mx = -mx; my = -my; }
+        } else {
+          // Hold range and strafe around the opponent.
+          const dx = foe.x - me.x, dy = foe.y - me.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const toward = dist > BOT.range + 40 ? 1 : dist < BOT.range - 40 ? -1 : 0;
+          if (now > bot.strafeUntil) {
+            bot.strafe = Math.random() < 0.5 ? -1 : 1;
+            bot.strafeUntil = now + BOT.strafeSwitch * 1000 * (0.5 + Math.random());
+          }
+          mx = (dx / dist) * toward + (-dy / dist) * bot.strafe;
+          my = (dy / dist) * toward + (dx / dist) * bot.strafe;
+          if (me.y < R + 20 || me.y > H - R - 20 || me.x < R + 20 || me.x > W - R - 20) bot.strafe = -bot.strafe;
+        }
+        bot.input = {
+          left: mx < -0.3, right: mx > 0.3, up: my < -0.3, down: my > 0.3,
+          fire: Math.random() < BOT.fireChance,
+        };
+      };
+      const pressed = (c, action) => (c === ai ? bot.input[action] : keys.has(CONTROLS[c][action]));
+
       const frame = (now) => {
         const dt = Math.min(0.05, (now - prev) / 1000);
         prev = now;
+        if (ai && now >= bot.nextDecision) {
+          decide(now);
+          bot.nextDecision = now + BOT.reaction;
+        }
 
         for (const c of ['w', 'b']) {
-          const p = players[c], ctl = CONTROLS[c];
-          if (keys.has(ctl.up)) p.y -= SPEED * dt;
-          if (keys.has(ctl.down)) p.y += SPEED * dt;
-          if (keys.has(ctl.left)) p.x -= SPEED * dt;
-          if (keys.has(ctl.right)) p.x += SPEED * dt;
+          const p = players[c];
+          if (pressed(c, 'up')) p.y -= SPEED * dt;
+          if (pressed(c, 'down')) p.y += SPEED * dt;
+          if (pressed(c, 'left')) p.x -= SPEED * dt;
+          if (pressed(c, 'right')) p.x += SPEED * dt;
           p.x = Math.max(R, Math.min(W - R, p.x));
           p.y = Math.max(R, Math.min(H - R, p.y));
-          if (keys.has(ctl.fire)) fire(c, now);
+          if (pressed(c, 'fire')) fire(c, now);
         }
 
         for (let i = bullets.length - 1; i >= 0; i--) {
