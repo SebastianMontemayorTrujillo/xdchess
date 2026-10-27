@@ -8,23 +8,17 @@ const PEGS = 4; // tick pegs per segment
 const SPIN_MS = 4000;
 const easeOut = (t) => 1 - (1 - t) ** 3;
 
-// Spin a roulette wheel over the registry and resolve with the chosen minigame.
-// `?game=<id>` in the URL forces a specific minigame (for testing).
+// Let the players spin the wheel or pick a game, then resolve with the chosen minigame.
+// `?game=<id>` in the URL forces a specific minigame and skips the choice (for testing).
 export async function spinRoulette(container, title) {
   const n = minigames.length;
   const seg = (Math.PI * 2) / n;
   const forced = new URLSearchParams(location.search).get('game');
   const forcedIdx = minigames.findIndex((g) => g.id === forced);
-  const target = forcedIdx >= 0 ? forcedIdx : Math.floor(Math.random() * n);
 
   container.innerHTML = `<div class="big">${title}</div><canvas width="${SIZE}" height="${SIZE}" class="wheel"></canvas><div class="big wheel-result">&nbsp;</div>`;
   const ctx = container.querySelector('canvas').getContext('2d');
   const result = container.querySelector('.wheel-result');
-
-  // Segment i spans [i*seg, (i+1)*seg) measured clockwise from the pointer at the top.
-  // Rotating the wheel by `angle` puts wheel-angle (-angle) under the pointer.
-  const jitter = (Math.random() - 0.5) * seg * 0.6;
-  const finalAngle = Math.PI * 2 * 5 - (target + 0.5) * seg + jitter;
 
   const draw = (angle, highlight = -1) => {
     const c = SIZE / 2, r = c - 14;
@@ -80,11 +74,48 @@ export async function spinRoulette(container, title) {
     ctx.stroke();
   };
 
+  // Choose: spin for a random game, or pick one (the wheel still spins, briefly, onto it).
+  let target, picked = false;
+  if (forcedIdx >= 0) target = forcedIdx;
+  else {
+    draw(0);
+    const choices = document.createElement('div');
+    choices.className = 'wheel-choices';
+    choices.innerHTML = `<button class="spin" data-pick="spin">🎲 Spin <small>(Space)</small></button>` +
+      minigames.map((g, i) => `<button data-pick="${i}" style="--seg:${COLORS[i % COLORS.length]}">${g.name}</button>`).join('');
+    container.insertBefore(choices, result);
+    target = await new Promise((resolve) => {
+      const onKey = (e) => {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault();
+        finish('spin');
+      };
+      const finish = (pick) => {
+        window.removeEventListener('keydown', onKey);
+        choices.remove();
+        picked = pick !== 'spin';
+        resolve(picked ? Number(pick) : Math.floor(Math.random() * n));
+      };
+      choices.addEventListener('click', (e) => {
+        const b = e.target.closest('button');
+        if (b) finish(b.dataset.pick);
+      });
+      window.addEventListener('keydown', onKey);
+    });
+  }
+
+  // Segment i spans [i*seg, (i+1)*seg) measured clockwise from the pointer at the top.
+  // Rotating the wheel by `angle` puts wheel-angle (-angle) under the pointer.
+  const jitter = (Math.random() - 0.5) * seg * 0.6;
+  const turns = picked ? 2 : 5;
+  const spinMs = picked ? SPIN_MS / 2 : SPIN_MS;
+  const finalAngle = Math.PI * 2 * turns - (target + 0.5) * seg + jitter;
+
   await new Promise((resolve) => {
     const start = performance.now();
     let lastPeg = 0;
     const frame = (now) => {
-      const t = Math.min(1, (now - start) / SPIN_MS);
+      const t = Math.min(1, (now - start) / spinMs);
       const angle = finalAngle * easeOut(t);
       const peg = Math.floor(angle / (seg / PEGS));
       if (peg !== lastPeg) {
