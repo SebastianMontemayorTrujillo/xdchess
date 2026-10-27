@@ -1,4 +1,5 @@
-const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+import { GLYPH } from './pieces.js';
+
 const FILES = 'abcdefgh';
 
 // Renders chess.board() into `el`. Calls onSquare(square) on clicks.
@@ -30,5 +31,3 @@ function findKingSq(board, color) {
   for (const row of board) for (const p of row) if (p && p.type === 'k' && p.color === color) return p.square;
   return null;
 }
-
-export const pieceName = (p) => `${p.color === 'w' ? 'White' : 'Black'} ${GLYPH[p.type]}`;

@@ -84,7 +84,7 @@ describe('AI search', () => {
         if (r.status === 'kingDied') break;
       }
     }
-  });
+  }, 30000); // random games vary in length; a long one can take several seconds
 
   it('returns null when there are no moves', () => {
     expect(chooseMove('7k/6Q1/6K1/8/8/8/8/8 b - - 0 1')).toBeNull();

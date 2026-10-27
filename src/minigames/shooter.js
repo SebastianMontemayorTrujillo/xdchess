@@ -1,3 +1,6 @@
+import { GLYPH, DEFAULT_PIECES } from '../pieces.js';
+import { playSfx } from '../audio.js';
+
 const W = 640, H = 420;
 const R = 16, SPEED = 220;            // player radius, px/s
 const BULLET_R = 5, BULLET_SPEED = 420;
@@ -14,7 +17,7 @@ const BOT = { reaction: 140, range: 260, lookahead: 0.6, dodgeMargin: 12, fireCh
 export default {
   id: 'shooter',
   name: 'Water Gun',
-  run(container, { ai = null } = {}) {
+  run(container, { ai = null, pieces = DEFAULT_PIECES } = {}) {
     return new Promise((resolve) => {
       container.innerHTML = `
         <div class="big">💦 Water Gun</div>
@@ -48,6 +51,7 @@ export default {
         const dist = Math.hypot(dx, dy);
         if (dist === 0) return;
         me.last = now;
+        playSfx('shot');
         bullets.push({
           owner: c,
           x: me.x + (dx / dist) * (R + BULLET_R),
@@ -128,6 +132,7 @@ export default {
           const target = players[b.owner === 'w' ? 'b' : 'w'];
           if (Math.hypot(b.x - target.x, b.y - target.y) < R + BULLET_R) {
             target.hp--;
+            playSfx('hit');
             bullets.splice(i, 1);
           } else if (b.x < 0 || b.x > W || b.y < 0 || b.y > H) {
             bullets.splice(i, 1);
@@ -155,10 +160,21 @@ export default {
         }
         for (const c of ['w', 'b']) {
           const p = players[c];
+          // Faint team-colored disc = hitbox, with the fighting piece drawn on top.
+          ctx.globalAlpha = 0.35;
           ctx.fillStyle = p.color;
           ctx.beginPath();
           ctx.arc(p.x, p.y, R, 0, Math.PI * 2);
           ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.font = `${R * 2.4}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = c === 'w' ? '#000' : p.color;
+          ctx.fillStyle = c === 'w' ? '#fff' : '#111';
+          ctx.strokeText(GLYPH[pieces[c]], p.x, p.y + 2);
+          ctx.fillText(GLYPH[pieces[c]], p.x, p.y + 2);
           for (let i = 0; i < MAX_HP; i++) {
             ctx.fillStyle = i < p.hp ? '#4f4' : '#555';
             ctx.fillRect(p.x - 15 + i * 11, p.y - R - 12, 9, 5);

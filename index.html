@@ -10,6 +10,7 @@
     <h1>🦀 Crab Chess</h1>
     <div id="status"></div>
     <div id="board"></div>
+    <div id="board3d" hidden></div>
     <div id="controls">
       <select id="mode" aria-label="Game mode">
         <option value="human">2 players</option>
@@ -19,8 +20,10 @@
       </select>
       <button id="resign">Resign</button>
       <button id="new">New game</button>
+      <button id="view">2D view</button>
+      <button id="mute" title="Sound on/off" aria-label="Sound on/off">🔊</button>
     </div>
-    <p class="help">White = Player 1 (W/A/S/D, X) · Black = Player 2 (I/J/K/L, M) or the computer. Every capture is settled by a minigame.</p>
+    <p class="help">White = Player 1 (W/A/S/D, X) · Black = Player 2 (I/J/K/L, M) or the computer. Every capture is settled by a minigame. 3D: drag to rotate, scroll to zoom.</p>
     <div id="overlay" hidden></div>
     <script type="module" src="/src/main.js"></script>
   </body>

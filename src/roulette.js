@@ -1,4 +1,5 @@
 import { minigames } from './minigames/index.js';
+import { playSfx } from './audio.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -10,6 +11,7 @@ export async function spinRoulette(container, title) {
   const target = forced ? pickIdx : Math.floor(Math.random() * minigames.length);
 
   container.innerHTML = `<div class="big">${title}</div>`;
+  playSfx('fight');
   const items = minigames.map((g) => {
     const d = document.createElement('div');
     d.className = 'roulette-item';
@@ -22,9 +24,11 @@ export async function spinRoulette(container, title) {
   let delay = 60;
   for (let i = 0; i <= steps; i++) {
     items.forEach((d, j) => d.classList.toggle('on', j === i % minigames.length));
+    playSfx('tick');
     await sleep(delay);
     delay *= 1.12;
   }
+  playSfx('pick');
   await sleep(700);
   return minigames[target];
 }

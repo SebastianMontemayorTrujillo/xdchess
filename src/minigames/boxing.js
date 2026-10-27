@@ -1,3 +1,6 @@
+import { pieceHTML, DEFAULT_PIECES } from '../pieces.js';
+import { playSfx } from '../audio.js';
+
 const MAX_HP = 10;
 const COOLDOWN = 150; // ms between punches
 const KEYS = {
@@ -12,14 +15,14 @@ const rand = (a, b) => a + Math.random() * (b - a);
 export default {
   id: 'boxing',
   name: 'Boxing',
-  run(container, { ai = null } = {}) {
+  run(container, { ai = null, pieces = DEFAULT_PIECES } = {}) {
     return new Promise((resolve) => {
       container.innerHTML = `
         <div class="big">🥊 Boxing</div>
         <div>White: X punch, hold S block · Black: M punch, hold K block</div>
         <div class="boxers">
-          <div class="boxer" id="bx-w">🦀<div class="hpbar"><div style="background:#eee"></div></div></div>
-          <div class="boxer" id="bx-b">🦞<div class="hpbar"><div style="background:#e55"></div></div></div>
+          <div class="boxer" id="bx-w">${pieceHTML('w', pieces.w)}<div class="hpbar"><div style="background:#eee"></div></div></div>
+          <div class="boxer" id="bx-b">${pieceHTML('b', pieces.b)}<div class="hpbar"><div style="background:#e55"></div></div></div>
         </div>`;
       const p = {
         w: { hp: MAX_HP, blocking: false, last: 0, hitAt: 0, el: container.querySelector('#bx-w') },
@@ -47,9 +50,12 @@ export default {
         me.last = performance.now();
         me.el.classList.add('punch');
         setTimeout(() => me.el.classList.remove('punch'), 80);
-        if (!foe.blocking) {
+        if (foe.blocking) {
+          playSfx('block');
+        } else {
           foe.hp--;
           foe.hitAt = performance.now();
+          playSfx('punch');
         }
         draw();
         if (foe.hp <= 0) done(c);
