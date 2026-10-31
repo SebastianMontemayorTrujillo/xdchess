@@ -5,6 +5,7 @@ import {
   TILE, PW, PH, STEP, ROWS, RUN, LEVEL, PLATFORMS, SPAWN,
   newPlayer, stepPlayer, raceWinner, platformX, crumbleState,
 } from './platformer-physics.js';
+import { createPlatformerAI } from '../ai/platformer-ai.js';
 
 const VW = 800, VH = ROWS * TILE;
 const LEVEL_W = LEVEL[0].length * TILE;
@@ -37,10 +38,12 @@ const ridge = (x, seed, amp) =>
 export default {
   id: 'platformer',
   name: 'Platform Race',
-  async run(container, fighters) {
+  async run(container, fighters, { ai } = {}) {
+    const help = { w: 'White: A/D move, W jump', b: 'Black: J/L move, I jump' };
+    if (ai) help[ai.color] = `${ai.color === 'w' ? 'White' : 'Black'}: 🤖 Minimax`;
     container.innerHTML = `
       <div class="big">🏁 Platform Race</div>
-      <div>White: A/D move, W jump · Black: J/L move, I jump · Springs launch you, platforms carry you, cracked blocks crumble!</div>
+      <div>${help.w} · ${help.b} · Springs launch you, platforms carry you, cracked blocks crumble!</div>
       <div>Reach the flag, or be furthest after ${TIME_LIMIT}s. Dying restarts you, but your best progress counts.</div>
       <div class="platformer">
         <canvas id="pf-w" width="${VW}" height="${VH}"></canvas>
@@ -114,12 +117,15 @@ export default {
         puff(c, x, y, 60, { colors: CONFETTI, speed: 260, up: 320, life: 1.6, size: 4, gravity: 500 });
       };
 
+      const bot = ai && createPlatformerAI(ai.difficulty);
       const stepRace = () => {
         elapsed += STEP;
         const world = { level: LEVEL, platforms: PLATFORMS, time: elapsed };
         for (const c of ['w', 'b']) {
           const p = players[c], f = fx[c], ctl = CONTROLS[c];
-          const input = result ? {} : { left: keys.has(ctl.left), right: keys.has(ctl.right), jump: keys.has(ctl.jump) };
+          const input = result ? {}
+            : bot && c === ai.color ? bot({ p, time: elapsed }, STEP)
+            : { left: keys.has(ctl.left), right: keys.has(ctl.right), jump: keys.has(ctl.jump) };
           const before = { x: p.x, y: p.y };
           const ev = stepPlayer(p, input, STEP, world);
           const feetX = p.x + PW / 2, feetY = p.y + PH;

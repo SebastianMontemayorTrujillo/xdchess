@@ -2,12 +2,14 @@ export const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟
 const FILES = 'abcdefgh';
 
 // Renders chess.board() into `el`. Calls onSquare(square) on clicks.
-export function renderBoard(el, chess, { selected, targets = [], onSquare }) {
+// `flipped` shows the board from Black's side.
+export function renderBoard(el, chess, { selected, targets = [], onSquare, flipped = false }) {
   el.innerHTML = '';
   const board = chess.board();
   const checkSq = chess.inCheck() ? findKingSq(board, chess.turn()) : null;
-  for (let r = 0; r < 8; r++) {
-    for (let f = 0; f < 8; f++) {
+  const order = flipped ? [7, 6, 5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5, 6, 7];
+  for (const r of order) {
+    for (const f of order) {
       const square = FILES[f] + (8 - r);
       const piece = board[r][f];
       const div = document.createElement('div');

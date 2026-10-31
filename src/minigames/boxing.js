@@ -5,6 +5,7 @@ import {
   ARENA_W, MAX_HP, JUMP, PUNCH, AIR_PUNCH,
   createFighter, stepFighter, resolveAttack, pushApart, timeUpWinner,
 } from './boxing-logic.js';
+import { createBoxingAI } from '../ai/boxing-ai.js';
 
 const W = ARENA_W, H = 420, FLOOR_Y = 360;
 const STEP = 1 / 120;
@@ -113,10 +114,15 @@ function pose(f, time, style) {
 export default {
   id: 'boxing',
   name: 'Boxing',
-  async run(container, fighters) {
+  async run(container, fighters, { ai } = {}) {
+    const help = {
+      w: 'White: A/D move, W jump, X punch, S block',
+      b: 'Black: J/L move, I jump, M punch, K block',
+    };
+    if (ai) help[ai.color] = `${ai.color === 'w' ? 'White' : 'Black'}: 🤖 Minimax`;
     container.innerHTML = `
       <div class="big">🥊 Boxing</div>
-      <div>White: A/D move, W jump, X punch, S block · Black: J/L move, I jump, M punch, K block</div>
+      <div>${help.w} · ${help.b}</div>
       <div>Punch in the air (jump + punch) hits harder · Blocking takes only chip damage</div>
       <canvas class="ring" width="${W}" height="${H}"></canvas>`;
     const ctx = container.querySelector('canvas').getContext('2d');
@@ -148,7 +154,9 @@ export default {
       window.addEventListener('keydown', down);
       window.addEventListener('keyup', up);
 
+      const bot = ai && createBoxingAI(ai.color, ai.difficulty);
       const inputFor = (c) => {
+        if (bot && c === ai.color) return bot(f, STEP);
         const k = CONTROLS[c];
         return {
           left: keys.has(k.left), right: keys.has(k.right), block: keys.has(k.block),

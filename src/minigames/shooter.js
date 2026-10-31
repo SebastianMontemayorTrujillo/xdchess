@@ -5,6 +5,7 @@ import {
   W, H, R, CRATE, CRATE_HP, MAX_HP, ZONE_WAIT, ZONE_SHRINK, TIME_CAP,
   createState, step, zoneRadius, inZone,
 } from './shooter-logic.js';
+import { createShooterAI } from '../ai/shooter-ai.js';
 
 const STEP = 1 / 120;
 const COUNTDOWN = 1.5; // 3·2·1 before the fight; "SPLASH!" shows briefly after
@@ -28,10 +29,12 @@ function tinted(img, size, color) {
 export default {
   id: 'shooter',
   name: 'Water Gun',
-  async run(container, fighters) {
+  async run(container, fighters, { ai } = {}) {
+    const help = { w: 'White: W/A/S/D move, X shoot', b: 'Black: I/J/K/L move, M shoot' };
+    if (ai) help[ai.color] = `${ai.color === 'w' ? 'White' : 'Black'}: 🤖 Minimax`;
     container.innerHTML = `
       <div class="big">💦 Water Gun</div>
-      <div>White: W/A/S/D move, X shoot · Black: I/J/K/L move, M shoot — shots auto-aim at your rival</div>
+      <div>${help.w} · ${help.b} — shots auto-aim at your rival</div>
       <div>Hide behind crates (they break after ${CRATE_HP} hits) · Stay inside the zone or you dry out!</div>
       <canvas class="arena" width="${W}" height="${H}"></canvas>`;
     const ctx = container.querySelector('canvas').getContext('2d');
@@ -60,7 +63,9 @@ export default {
       window.addEventListener('keydown', down);
       window.addEventListener('keyup', up);
 
+      const bot = ai && createShooterAI(ai.color, ai.difficulty);
       const inputFor = (c) => {
+        if (bot && c === ai.color) return bot(state, STEP);
         const k = CONTROLS[c];
         return {
           up: keys.has(k.up), down: keys.has(k.down), left: keys.has(k.left), right: keys.has(k.right),
